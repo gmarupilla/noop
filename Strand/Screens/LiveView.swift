@@ -252,7 +252,8 @@ struct LiveView: View {
         if activeConnection && live.encryptedBond { return "FULL BOND" }
         if activeConnection { return "LIVE HR ONLY" }
         if ringStreaming { return "STREAMING" }
-        if live.connected { return "CONNECTING" }
+        if activeIsWhoop && live.connected && model.bpm != nil { return "HR · BOND PENDING" }
+        if live.connected { return "BOND PENDING" }
         if live.encryptedBond { return "PAIRED" }
         return "OFFLINE"
     }
@@ -280,7 +281,7 @@ struct LiveView: View {
             (activeConnection && live.encryptedBond) ? (String(localized: "Bonded · streaming"), StrandPalette.accent)
             : activeConnection ? (String(localized: "Live HR (not fully paired)"), StrandPalette.statusWarning)
             : ringStreaming ? (String(localized: "Streaming"), StrandPalette.accent)
-            : live.connected ? (String(localized: "Connected"), StrandPalette.statusWarning)
+            : live.connected ? (String(localized: "Radio connected"), StrandPalette.statusWarning)
             : live.encryptedBond ? (String(localized: "Paired · idle"), StrandPalette.statusWarning)
             : (String(localized: "Disconnected"), StrandPalette.metricRose)
         return HStack(spacing: 8) {
@@ -959,7 +960,10 @@ private struct LiveHeartReadout: View {
         // wrote it, and under a ring parked in the nonce handshake it read "Connected, waiting for a
         // streaming state" for an hour (#2303). The ring's phase is what the console should say.
         if activeIsOura { return LiveRingCopy.status(model.ouraLinkPhase, streaming: live.connected && live.streamingLiveHR) }
-        if live.connected { return String(localized: "Connected, waiting for a streaming state.") }
+        if activeIsWhoop && live.connected && displayHR != nil {
+            return String(localized: "Heart rate received; full WHOOP bond is still pending.")
+        }
+        if live.connected { return String(localized: "Radio connected; waiting for a trusted stream.") }
         // The actionable "Scan and connect…" CTA now lives in `offlineConnectCallout` above the fold, so
         // this caption stays a calm empty-state descriptor rather than a second, competing CTA.
         return String(localized: "Live heart rate appears here once a strap is connected.")
@@ -1083,7 +1087,10 @@ private struct LivePhysiology: View {
     private var connectionModeDetail: String {
         if activeConnection && live.encryptedBond { return String(localized: "Full strap stream is active.") }
         if activeConnection || ringStreaming { return String(localized: "Heart rate stream is active.") }
-        if live.connected { return String(localized: "Radio connected, stream not yet trusted.") }
+        if activeIsWhoop && live.connected && (live.heartRate != nil || !live.rr.isEmpty) {
+            return String(localized: "Heart rate received; full WHOOP bond is still pending.")
+        }
+        if live.connected { return String(localized: "Radio connected; waiting for a trusted stream.") }
         return String(localized: "No live stream.")
     }
 }
